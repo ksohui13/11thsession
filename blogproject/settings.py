@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import os, json, sys
+from django.core.exceptions import ImproperlyConfigured
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,13 +23,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-zdd8voe8js*sg^&#^as=&ah())3@=x%=rptv7niqn_m*%b4sdt'
+
+# SECRET_BASE_FILE = os.path.join(BASE_DIR, 'secrets.json')
+
+# secrets = json.loads(open(SECRET_BASE_FILE).read())
+# for key, value in secrets.items():
+#     setattr(sys.modules[__name__], key, value)
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
+CORS_ORIGIN_ALLOW_ALL = True #추가
+CORS_ALLOW_CREDENTIALS = True #추가
 
 # Application definition
 
@@ -43,9 +54,13 @@ INSTALLED_APPS = [
 
     #drf
     'rest_framework',
+
+    #CORS
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -53,6 +68,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'blogproject.urls'
@@ -75,9 +91,31 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'blogproject.wsgi.application'
 
+# secret_file = os.path.join(BASE_DIR, 'secrets.json')
+
+# with open(secret_file) as f:
+#     secrets = json.loads(f.read())
+
+
+#환경변수 분리
+def get_env_variable(var_name):
+    try:
+        return os.environ[var_name]
+    except KeyError:
+        error_msg = 'Set the {} environment variable'.format(var_name)
+        raise ImproperlyConfigured(error_msg)
+
+# def get_env_variable(key):
+#     try:
+#         return secrets[key]
+#     except KeyError:
+#         error_msg = f"Set the {key} environment variable"
+#         raise ImproperlyConfigured(error_msg)
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+
+SECRET_KEY = get_env_variable('SECRET_KEY')
 
 DATABASES = {
     'default': {
@@ -86,6 +124,20 @@ DATABASES = {
     }
 }
 
+#aws rds 사용
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql', #import pymysql
+# 		'NAME': get_env_variable('DATABASE'),
+#         'USER': get_env_variable('DB_USER'),
+#         'PASSWORD': get_env_variable('DB_PASSWORD'),
+#         'HOST': get_env_variable('DB_HOST'),
+#         'PORT': get_env_variable('DB_PORT'),
+#         'OPTIONS':{
+#             'init_command' : "SET sql_mode='STRICT_TRANS_TABLES'"
+#         }
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -122,6 +174,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
